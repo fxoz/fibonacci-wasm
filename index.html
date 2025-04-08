@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASM Fibonacci</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #111;
+            color: #eee;
+            font-size: 16px;
+        }
+
+        input[type="number"] {
+            width: 50px;
+            padding: 5px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 5px 10px;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        a {
+            color: #fff;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+
+<body>
+    <p>
+        WebAssembly (generated using AssemblyScript) Fibonacci calculator up to n=92 (u64 limit)
+    </p>
+    <input type="number" id="num" placeholder="n" min="0" max="92" />
+    <button id="calc">Calculate</button>
+    <p id="result"></p>
+
+    <a href="https://docs.github.com/privacy">GitHub Privacy</a>
+    <a href="https://frost.cat/impressum">Impressum</a>
+
+    <script>
+        const wasmBrowserInstantiate = async (wasmModuleUrl, importObject) => {
+            let response = undefined;
+
+            if (!importObject) {
+                importObject = {
+                    env: {
+                        abort: () => console.log("Abort!")
+                    }
+                };
+            }
+
+            if (WebAssembly.instantiateStreaming) {
+                response = await WebAssembly.instantiateStreaming(
+                    fetch(wasmModuleUrl),
+                    importObject
+                );
+            } else {
+                const fetchAndInstantiateTask = async () => {
+                    const wasmArrayBuffer = await fetch(wasmModuleUrl).then(response =>
+                        response.arrayBuffer()
+                    );
+                    return WebAssembly.instantiate(wasmArrayBuffer, importObject);
+                };
+                response = await fetchAndInstantiateTask();
+            }
+
+            return response;
+        };
+
+        const runWasmAdd = async (n) => {
+            const wasmModule = await wasmBrowserInstantiate("out.wasm");
+            const addResult = wasmModule.instance.exports.fib(n);
+            const resultElement = document.getElementById("result");
+            resultElement.innerText = `fib(${n}) = ${addResult}`;
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const calcButton = document.getElementById("calc");
+
+            calcButton.onclick = () => {
+                const numInput = document.getElementById("num");
+                const n = parseInt(numInput.value);
+                if (n >= 0 && n <= 92) {
+                    runWasmAdd(n);
+                } else {
+                    alert("Please enter a number between 0 and 92.");
+                }
+            };
+        });
+    </script>
+</body>
+
+</html>

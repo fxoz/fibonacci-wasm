@@ -1,0 +1,1 @@
+bunx asc in.ts --outFile out.wasm --optimize
